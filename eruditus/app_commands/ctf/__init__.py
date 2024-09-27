@@ -40,7 +40,7 @@ from lib.util import (
 )
 from msg_components.buttons.workon import WorkonButton
 from msg_components.forms.credentials import create_credentials_modal_for_platform
-from msg_components.forms.flag import FlagSubmissionForm
+from msg_components.forms.flag import FlagSubmissionForm, FlagHoardingForm
 
 _log = logging.getLogger(__name__)
 
@@ -131,7 +131,8 @@ class CTF(app_commands.Group):
 
             display_name = f"{challenge['name']} ({challenge['category']})"
             if not current.strip() or current.lower() in display_name.lower():
-                suggestions.append(Choice(name=display_name, value=challenge["name"]))
+                suggestions.append(
+                    Choice(name=display_name, value=challenge["name"]))
 
             if len(suggestions) == 25:
                 break
@@ -218,10 +219,12 @@ class CTF(app_commands.Group):
                 def __init__(self) -> None:
                     super().__init__(timeout=None)
                     self.add_item(
-                        discord.ui.Button(style=discord.ButtonStyle.green, label="Yes")
+                        discord.ui.Button(
+                            style=discord.ButtonStyle.green, label="Yes")
                     )
                     self.add_item(
-                        discord.ui.Button(style=discord.ButtonStyle.red, label="No")
+                        discord.ui.Button(
+                            style=discord.ButtonStyle.red, label="No")
                     )
                     self.children[0].callback = self.yes_callback
                     self.children[1].callback = self.no_callback
@@ -297,7 +300,8 @@ class CTF(app_commands.Group):
 
         # Sort by category, then by name.
         challenges = sorted(
-            challenges, key=lambda challenge: (challenge["category"], challenge["name"])
+            challenges, key=lambda challenge: (
+                challenge["category"], challenge["name"])
         )
         if challenges:
             name_field_width = (
@@ -359,7 +363,8 @@ class CTF(app_commands.Group):
             if role in member.roles
         ]
 
-        perm_rdwr = discord.PermissionOverwrite(read_messages=True, send_messages=True)
+        perm_rdwr = discord.PermissionOverwrite(
+            read_messages=True, send_messages=True)
         perm_rdonly = discord.PermissionOverwrite(
             read_messages=True, send_messages=False
         )
@@ -392,7 +397,8 @@ class CTF(app_commands.Group):
 
         # Delete all challenges for that CTF from the database.
         for challenge_id in ctf["challenges"]:
-            MONGO[DBNAME][CHALLENGE_COLLECTION].delete_one({"_id": challenge_id})
+            MONGO[DBNAME][CHALLENGE_COLLECTION].delete_one(
+                {"_id": challenge_id})
 
         # Update status of the CTF.
         MONGO[DBNAME][CTF_COLLECTION].update_one(
@@ -456,7 +462,8 @@ class CTF(app_commands.Group):
 
         # Delete all challenges for that CTF from the database.
         for challenge_id in ctf["challenges"]:
-            MONGO[DBNAME][CHALLENGE_COLLECTION].delete_one({"_id": challenge_id})
+            MONGO[DBNAME][CHALLENGE_COLLECTION].delete_one(
+                {"_id": challenge_id})
 
         # Delete the CTF from the database.
         MONGO[DBNAME][CTF_COLLECTION].delete_one({"_id": ctf["_id"]})
@@ -754,50 +761,52 @@ class CTF(app_commands.Group):
             name=text_channel.name.replace("💤", "🔄").replace("🎯", "🔄")
         )
 
+    # grr fuck discord arbitrary limits (TypeError: groups cannot have more than 25 commands)
+    # @app_commands.checks.bot_has_permissions(manage_channels=True)
+    # @app_commands.command()
+    # @_in_ctf_channel()
+    # async def renamechallenge(
+    #     self,
+    #     interaction: discord.Interaction,
+    #     new_name: str,
+    # ) -> None:
+    #     """Rename a challenge.
+
+    #     Args:
+    #         interaction: The interaction that triggered this command.
+    #         new_name: New challenge name.
+    #     """
+    #     challenge = get_challenge_info(thread=interaction.channel_id)
+    #     if challenge is None:
+    #         await interaction.response.send_message(
+    #             "Run this command from within a challenge thread.",
+    #             ephemeral=True,
+    #         )
+    #         return
+
+    #     challenge_thread = discord.utils.get(
+    #         interaction.guild.threads, id=interaction.channel_id
+    #     )
+    #     new_thread_name = sanitize_channel_name(new_name)
+
+    #     if challenge["blooded"]:
+    #         new_thread_name = f"🩸-{new_thread_name}"
+    #     elif challenge["solved"]:
+    #         new_thread_name = f"✅-{new_thread_name}"
+    #     else:
+    #         new_thread_name = f"❌-{new_thread_name}"
+
+    #     MONGO[DBNAME][CHALLENGE_COLLECTION].update_one(
+    #         {"_id": challenge["_id"]},
+    #         {"$set": {"name": new_name}},
+    #     )
+    #     await interaction.response.send_message("✅ Challenge renamed.")
+    #     await challenge_thread.edit(name=new_thread_name)
+
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.command()
-    @_in_ctf_channel()
-    async def renamechallenge(
-        self,
-        interaction: discord.Interaction,
-        new_name: str,
-    ) -> None:
-        """Rename a challenge.
-
-        Args:
-            interaction: The interaction that triggered this command.
-            new_name: New challenge name.
-        """
-        challenge = get_challenge_info(thread=interaction.channel_id)
-        if challenge is None:
-            await interaction.response.send_message(
-                "Run this command from within a challenge thread.",
-                ephemeral=True,
-            )
-            return
-
-        challenge_thread = discord.utils.get(
-            interaction.guild.threads, id=interaction.channel_id
-        )
-        new_thread_name = sanitize_channel_name(new_name)
-
-        if challenge["blooded"]:
-            new_thread_name = f"🩸-{new_thread_name}"
-        elif challenge["solved"]:
-            new_thread_name = f"✅-{new_thread_name}"
-        else:
-            new_thread_name = f"❌-{new_thread_name}"
-
-        MONGO[DBNAME][CHALLENGE_COLLECTION].update_one(
-            {"_id": challenge["_id"]},
-            {"$set": {"name": new_name}},
-        )
-        await interaction.response.send_message("✅ Challenge renamed.")
-        await challenge_thread.edit(name=new_thread_name)
-
-    @app_commands.checks.bot_has_permissions(manage_channels=True)
-    @app_commands.command()
-    @app_commands.autocomplete(name=_challenge_autocompletion_func)  # type: ignore
+    # type: ignore
+    @app_commands.autocomplete(name=_challenge_autocompletion_func)
     @_in_ctf_channel()
     async def deletechallenge(
         self, interaction: discord.Interaction, name: Optional[str] = None
@@ -907,7 +916,8 @@ class CTF(app_commands.Group):
         solvers = await parse_challenge_solvers(interaction, challenge, members)
 
         ctf = get_ctf_info(guild_category=interaction.channel.category_id)
-        solves_channel = interaction.client.get_channel(ctf["guild_channels"]["solves"])
+        solves_channel = interaction.client.get_channel(
+            ctf["guild_channels"]["solves"])
         embed = discord.Embed(
             title="🎉 Challenge solved!",
             description=(
@@ -1033,7 +1043,8 @@ class CTF(app_commands.Group):
 
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.command()
-    @app_commands.autocomplete(name=_challenge_autocompletion_func)  # type: ignore
+    # type: ignore
+    @app_commands.autocomplete(name=_challenge_autocompletion_func)
     @_in_ctf_channel()
     async def workon(self, interaction: discord.Interaction, name: str) -> None:
         """Start working on a challenge and join its thread.
@@ -1075,7 +1086,8 @@ class CTF(app_commands.Group):
 
     @app_commands.checks.bot_has_permissions(manage_channels=True)
     @app_commands.command()
-    @app_commands.autocomplete(name=_challenge_autocompletion_func)  # type: ignore
+    # type: ignore
+    @app_commands.autocomplete(name=_challenge_autocompletion_func)
     @_in_ctf_channel()
     async def unworkon(
         self, interaction: discord.Interaction, name: Optional[str] = None
@@ -1341,6 +1353,39 @@ class CTF(app_commands.Group):
 
     @app_commands.command()
     @_in_ctf_channel()
+    async def hoard(
+        self, interaction: discord.Interaction, members: Optional[str] = None
+    ) -> None:
+        """hoard a flag
+
+        Args:
+            interaction: The interaction that triggered this command.
+            members: List of member mentions who contributed in solving the challenge.
+        """
+        await interaction.response.send_modal(FlagHoardingForm(members=members))
+
+    @app_commands.command()
+    @_in_ctf_channel()
+    async def showhoards(
+        self, interaction: discord.Interaction
+    ) -> None:
+        """show all hoarded flags
+        """
+        await interaction.response.defer()
+
+        ctf = get_ctf_info(guild_category=interaction.channel.category_id)
+
+        message = "# **Hoarded flags**\n"
+
+        for challenge_id in ctf["challenges"]:
+            challenge = get_challenge_info(_id=challenge_id)
+            if challenge["hoarded"] == True:
+                message += f"**{challenge['name']}** ({challenge['category']}): `{challenge['flag']}`\n"
+
+        await interaction.followup.send(message)
+
+    @app_commands.command()
+    @_in_ctf_channel()
     async def scoreboard(self, interaction: discord.Interaction) -> None:
         """Display scoreboard for the current CTF.
 
@@ -1483,7 +1528,8 @@ class CTF(app_commands.Group):
         with open(tmp, "w", encoding="utf-8") as f:
             f.write("\n".join(map(str, exportable)))
 
-        self._chat_export_tasks.append((interaction.channel, tmp, output_dirname))
+        self._chat_export_tasks.append(
+            (interaction.channel, tmp, output_dirname))
         if len(self._chat_export_tasks) == 1:
             asyncio.create_task(
                 _handle_process(
